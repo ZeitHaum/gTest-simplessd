@@ -3,8 +3,6 @@ project(unittets-simplessd)
 
 enable_testing()
 add_subdirectory(googletest)
-# add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/simplessd)
-add_compile_options(-DDRAMPOWER_SOURCE_DIR=${HOME}/simplessd-fullsystem/ext/drampower/src)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/simplessd

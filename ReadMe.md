@@ -6,21 +6,16 @@
     └── gTest-simplessd
 ```
 
-If your path of simplessd-fullsystem is different from mine, please modify CMakeLists.txt to adjust.
-The code need to be modified is seems like below:
-
-```CMakeLists
-add_compile_options(-DDRAMPOWER_SOURCE_DIR=${HOME}/simplessd-fullsystem/ext/drampower/src)
-```
-
 # How to build?
 Simply use the following command:
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake .. -DDRAMPOWER_SOURCE_DIR=${HOME}/simplessd-fullsystem/ext/drampower/src;
 make
 ```
+
+If your path of simplessd-fullsystem is different from mine, please modify cmake command to adjust.
 
 # How to run?
 ```bash
