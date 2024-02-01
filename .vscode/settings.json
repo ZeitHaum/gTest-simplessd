@@ -66,6 +66,25 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "csetjmp": "cpp",
+        "barrier": "cpp",
+        "bitset": "cpp",
+        "cfenv": "cpp",
+        "charconv": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "coroutine": "cpp",
+        "cuchar": "cpp",
+        "regex": "cpp",
+        "source_location": "cpp",
+        "future": "cpp",
+        "latch": "cpp",
+        "ranges": "cpp",
+        "scoped_allocator": "cpp",
+        "shared_mutex": "cpp",
+        "syncstream": "cpp",
+        "typeindex": "cpp",
+        "valarray": "cpp"
     }
 }
