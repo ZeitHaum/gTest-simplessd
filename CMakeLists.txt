@@ -8,6 +8,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/simplessd
     ${gtest_SOURCE_DIR}/include 
     ${gtest_SOURCE_DIR}
+    ${DRAMPOWER_SOURCE_DIR}
 )
 
 # enable debug
@@ -21,4 +22,5 @@ add_library(random_generator
 )
 
 add_executable(unit_test unit_test.cc)
+target_compile_options(unit_test PRIVATE -fno-access-control)
 target_link_libraries(unit_test simplessd gtest_main random_generator)
