@@ -9,6 +9,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/unit_test",
+            // "args": [
+            //     "--gtest_filter=PageMappingTestFixture.GCTest"
+            // ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
