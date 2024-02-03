@@ -188,7 +188,7 @@ TEST_F(PageMappingTestFixture, GCTest){
   req.cd_info.offset = 0;
   req.cd_info.pDisk = new SimpleSSD::CompressedDisk();
   req.cd_info.pDisk->open(img_file, cfg_info->nPagesToWarmup * ioUnitInPage* ioUnitSize, ioUnitSize);
-  ((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->init(ioUnitSize, SimpleSSD::CompressType::LZMA);
+  ((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->init(ioUnitSize, SimpleSSD::CompressType::LZ4);
   EXPECT_GE(((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->compress_unit_totalcnt, cfg_info->nPagesToWarmup * ioUnitInPage);
   int write_pages = pageCount * 100;
   req.ioFlag.set();
