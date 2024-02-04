@@ -27,6 +27,11 @@
             "type": "shell",
             "label": "cmakebuild",
             "command": "./build.sh"
+        },
+        {
+            "type": "shell",
+            "label": "rmimg",
+            "command": "rm ./nvme.img",
         }
     ],
     "version": "2.0.0"
