@@ -29,7 +29,23 @@ struct ConfigInfo{
   uint64_t nPagesToInvalidate;
 };
 
-class PageMappingTestFixture: public ::testing::Test{
+class BasicPageMappingTestFixture: public ::testing::Test{
+protected:
+  static SimpleSSD::ConfigReader* conf;
+  static FTL* p_ftl;
+  static PageMapping* p_pmap;
+  static SimpleSSD::DRAM::AbstractDRAM * p_dram;
+  static ConfigInfo* cfg_info;
+};
+
+//init and allocate space
+SimpleSSD::ConfigReader* BasicPageMappingTestFixture::conf = nullptr;
+FTL* BasicPageMappingTestFixture::p_ftl = nullptr;
+PageMapping* BasicPageMappingTestFixture::p_pmap = nullptr;
+SimpleSSD::DRAM::AbstractDRAM * BasicPageMappingTestFixture::p_dram = nullptr;
+ConfigInfo* BasicPageMappingTestFixture::cfg_info = nullptr;
+
+class PageMappingTestFixture: public BasicPageMappingTestFixture{
 protected:
     static void SetUpTestCase()
     {
@@ -75,19 +91,8 @@ protected:
       // called after every test;
       p_pmap->resetStatValues();
     }
-
-    static SimpleSSD::ConfigReader* conf;
-    static FTL* p_ftl;
-    static PageMapping* p_pmap;
-    static SimpleSSD::DRAM::AbstractDRAM * p_dram;
-    static ConfigInfo* cfg_info;
 };
 
-SimpleSSD::ConfigReader* PageMappingTestFixture::conf = nullptr;
-FTL* PageMappingTestFixture::p_ftl = nullptr;
-PageMapping* PageMappingTestFixture::p_pmap = nullptr;
-SimpleSSD::DRAM::AbstractDRAM * PageMappingTestFixture::p_dram = nullptr;
-ConfigInfo* PageMappingTestFixture::cfg_info = nullptr;
 
 TEST_F(PageMappingTestFixture, InitTest){
     //Test Initialize
@@ -188,7 +193,7 @@ TEST_F(PageMappingTestFixture, GCTest){
   req.cd_info.offset = 0;
   req.cd_info.pDisk = new SimpleSSD::CompressedDisk();
   req.cd_info.pDisk->open(img_file, cfg_info->nPagesToWarmup * ioUnitInPage* ioUnitSize, ioUnitSize);
-  ((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->init(ioUnitSize, SimpleSSD::CompressType::LZ4);
+  ((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->init(ioUnitSize, SimpleSSD::CompressType::LZMA);
   EXPECT_GE(((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->compress_unit_totalcnt, cfg_info->nPagesToWarmup * ioUnitInPage);
   int write_pages = pageCount * 100;
   req.ioFlag.set();
@@ -213,4 +218,4 @@ TEST_F(PageMappingTestFixture, GCTest){
   EXPECT_LE(block_stat.validDataLength, block_stat.totalDataLength);
   EXPECT_LE(block_stat.validIoUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
   EXPECT_EQ(block_stat.totalUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
-}
+}                     
