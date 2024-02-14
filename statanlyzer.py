@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 l_t = int(input("totalDataLength:"))
 l_v = int(input("validDataLength:"))
 u_v = int(input("validUnitCount:"))

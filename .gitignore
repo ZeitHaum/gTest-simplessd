@@ -4,3 +4,5 @@ build
 test.cpp
 test
 *.img
+perf.data
+utstat.txt

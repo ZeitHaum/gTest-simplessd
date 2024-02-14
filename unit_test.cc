@@ -23,5 +23,8 @@ int main(int argc, char **argv) {
     }
 
     // 运行测试
-    return RUN_ALL_TESTS();
+    int test_ret =  RUN_ALL_TESTS();
+    //do some clear jobs.
+    utStatFile.close();
+    return test_ret;
 }

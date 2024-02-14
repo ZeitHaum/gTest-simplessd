@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/unit_test",
             // "args": [
-            //     "--gtest_filter=PageMappingTestFixture.GCTest"
+            //     "--gtest_filter=PageMappingTestFixture.GCConsistencyTest"
             // ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
