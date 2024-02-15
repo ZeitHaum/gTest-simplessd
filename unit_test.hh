@@ -5,9 +5,20 @@
 #include "random_generator.cc"
 #include <thread>
 #include <fstream>
+#include <memory>
+#include <errno.h>
+#include <regex>
 
 using namespace SimpleSSD::FTL;
 
+//define region
+#define clear_ptr(ptr) if(ptr){ \
+  delete ptr; \
+  ptr = nullptr;\
+} 
+#define is_ratio(x) ((x) >= 0 && (x) <= 1)
+
+// global variables' defination
 const std::string actual_config_file = "./simplessd/config/samsung_983dct_1.92tb.cfg";
 const std::string simple_config_file = "./unit_test.cfg";
 const std::string img_file = "./nvme.img";
@@ -21,74 +32,47 @@ TestConfig test_cfg = TestConfig::SIMPLE;
 std::ofstream utStatFile("utstat.txt"); // output ut stats.
 uint64_t printstat_ftlcnt = 0;
 
-/**
- * The following tests are all base on my project Simplessd:
- * https://github.com/ZeitHaum/Simplessd.git (branch dev)
- * Most code is in ftl/.
-*/
-
+//declaration of neccessary structures.
 struct ConfigInfo{
   uint64_t nTotalLogicalPages;
   uint64_t nPagesToWarmup;
   uint64_t nPagesToInvalidate;
 };
 
-#define clear_ptr(ptr) if(ptr){ \
-  delete ptr; \
-  ptr = nullptr;\
-} 
-void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap, SimpleSSD::DRAM::AbstractDRAM* &p_dram, ConfigInfo* &cfg_info){
-  clear_ptr(conf);
-  clear_ptr(p_ftl);
-  clear_ptr(p_dram);
-  clear_ptr(cfg_info);
-  conf = new SimpleSSD::ConfigReader();
-  const string* s = &simple_config_file;
-  if(test_cfg==TestConfig::SIMPLE){
-      s = &simple_config_file;
-      pageCount = 16;
-  }
-  else if(test_cfg == TestConfig::ACTUAL){
-      s = &actual_config_file;
-      pageCount = 768;
-  }
-  else{
-      assert(0 && "No such TestConfig.");
-  }
-  if(!conf->init(*s)){
-      assert(0 && "Failed to laod file.");
-  }
-  p_dram = new SimpleSSD::DRAM::SimpleDRAM(*conf);
-  p_ftl = new FTL(*conf, p_dram);
-  p_pmap = (PageMapping*)p_ftl->pFTL;
-  cfg_info = new ConfigInfo();
-  cfg_info->nTotalLogicalPages = p_pmap->param.totalLogicalBlocks * p_pmap->param.pagesInBlock;
-  cfg_info->nPagesToWarmup = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_FILL_RATIO);
-  cfg_info->nPagesToInvalidate = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
+struct StatAnalyzerOut{
+  double r_c;
+  double f_c;
+  double r_f;
+};
+
+//declaration of neccessary help functions.
+void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap, SimpleSSD::DRAM::AbstractDRAM* &p_dram, ConfigInfo* &cfg_info);
+
+void printFTLInfo(PageMapping* p_pmap);
+
+bool pyRun(const std::string file_name, const std::string input, std::string& output);
+
+bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out);
+
+//Unit_test of help functions;
+TEST(PyRunTest, statAnalyzerTest){
+  std::string file_name = "statanalyzer.py";
+  std::string output = "";
+  //Random generate input
+  std::string test_input = "42501144576\n42097716496\n10289809\n99440\n10376256\n";
+  ASSERT_TRUE(pyRun(file_name, test_input, output));
+  StatAnalyzerOut out;
+  ASSERT_TRUE(parseStatAnalyzerOut(output, out));
+  EXPECT_LE(abs(out.r_c - 0.0095D), 0.0001D);
+  EXPECT_LE(abs(out.f_c - 0.1307D), 0.0001D);
+  EXPECT_LE(abs(out.r_f - 0.9271D), 0.0001D);
 }
 
-void printFTLInfo(PageMapping* p_pmap){
-  
-  std::vector<SimpleSSD::Stats> stats;
-  std::vector<double> values;
-  std::string prefix = "system.pc.ftl.page_mapping";
-  p_pmap->getStatList(stats, prefix);
-  p_pmap->getStatValues(values);
-  ASSERT_EQ(values.size(), stats.size());
-  utStatFile << "--------------------------------------" << std::endl;
-  printstat_ftlcnt++;
-  utStatFile << "This is the " << printstat_ftlcnt << "-th output of FTL statistics data." << std::endl;
-  for(size_t i = 0; i<values.size(); ++i){
-    std::string out = "";
-    out+= stats[i].name;
-    out+= "           ";
-    out+= std::to_string((long long)values[i]);
-    out+= "           //";
-    out+= stats[i].desc;
-    utStatFile << out << std::endl;
-  }
-  utStatFile << "--------------------------------------" << std::endl;
-}
+/**
+ * The following tests are all base on my project Simplessd:
+ * https://github.com/ZeitHaum/Simplessd.git (branch dev)
+ * Most code is in ftl/.
+*/
 
 class BasicPageMappingTestFixture: public ::testing::Test{
 protected:
@@ -263,4 +247,4 @@ TEST_F(PageMappingConsistencyTestFixture, PageMappingConsistencyTest){
   //TODO, Use test.cpp and PythonRuner
 }
 
-#undef clear_ptr
+
