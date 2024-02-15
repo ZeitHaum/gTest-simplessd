@@ -54,6 +54,10 @@ bool pyRun(const std::string file_name, const std::string input, std::string& ou
 
 bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out);
 
+SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, uint64_t superpage_cnt);
+
+void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap);
+
 //Unit_test of help functions;
 TEST(PyRunTest, statAnalyzerTest){
   std::string file_name = "statanalyzer.py";
@@ -192,41 +196,48 @@ TEST_F(PageMappingTestFixture, OverWriteTest){
   EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
   EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
   EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
+  utStatFile<<"unit_test_none ";
+  outputUTStats(block_stat, p_pmap);
   printFTLInfo(p_pmap);
 }
 
 TEST_F(PageMappingTestFixture, GCTest){
-  Request req = Request(ioUnitInPage);
-  req.cd_info.offset = 0;
-  req.cd_info.pDisk = new SimpleSSD::CompressedDisk();
-  req.cd_info.pDisk->open(img_file, cfg_info->nPagesToWarmup * ioUnitInPage* ioUnitSize, ioUnitSize);
-  ((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->init(ioUnitSize, SimpleSSD::CompressType::LZ4);
-  EXPECT_GE(((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->compress_unit_totalcnt, cfg_info->nPagesToWarmup * ioUnitInPage);
-  int write_pages = pageCount * 100;
-  req.ioFlag.set();
-  uint64_t tick = 0LL;
-  for(uint64_t i = 1; i<=write_pages; ++i){
-    req.lpn = i;
-    p_pmap->write(req, tick);
-    if(i % pageCount == 0){
-      std::cout <<"gcTest-Finished pages: " << i << "/" << write_pages << "\n";
+  auto GCTest = [&](std::string test_name, SimpleSSD::CompressType compress_type){
+    Request req = Request(ioUnitInPage);
+    req.cd_info.offset = 0;
+    req.cd_info.pDisk = createTestDisk(compress_type, cfg_info->nPagesToWarmup);
+    EXPECT_GE(((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->compress_unit_totalcnt, cfg_info->nPagesToWarmup * ioUnitInPage);
+    int write_pages = pageCount * 100;
+    req.ioFlag.set();
+    uint64_t tick = 0LL;
+    for(uint64_t i = 1; i<=write_pages; ++i){
+      req.lpn = i;
+      p_pmap->write(req, tick);
+      if(i % pageCount == 0){
+        std::cout <<"gcTest-Finished pages: " << i << "/" << write_pages << "\n";
+      }
     }
-  }
-  BlockStat block_stat = p_pmap->calculateBlockStat();
-  EXPECT_EQ(p_pmap->stat.decompressCount, 0);
-  EXPECT_GE(p_pmap->stat.failedCompressCout, 0);
-  EXPECT_GT(p_pmap->stat.gcCount, 10);
-  EXPECT_GE(p_pmap->stat.overwriteCompressUnitCount, 0);
-  EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
-  EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
-  EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
-  EXPECT_GT(block_stat.compressUnitCount, 0);
-  EXPECT_EQ(block_stat.totalDataLength, ioUnitInPage * ioUnitSize * cfg_info->nPagesToWarmup);
-  EXPECT_LE(block_stat.validDataLength, block_stat.totalDataLength);
-  EXPECT_LE(block_stat.validIoUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
-  EXPECT_EQ(block_stat.totalUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
-  // print infos;
-  printFTLInfo(p_pmap);
+    BlockStat block_stat = p_pmap->calculateBlockStat();
+    EXPECT_EQ(p_pmap->stat.decompressCount, 0);
+    EXPECT_GE(p_pmap->stat.failedCompressCout, 0);
+    EXPECT_GT(p_pmap->stat.gcCount, 10);
+    EXPECT_GE(p_pmap->stat.overwriteCompressUnitCount, 0);
+    EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
+    EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
+    EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
+    EXPECT_GT(block_stat.compressUnitCount, 0);
+    EXPECT_EQ(block_stat.totalDataLength, ioUnitInPage * ioUnitSize * cfg_info->nPagesToWarmup);
+    EXPECT_LE(block_stat.validDataLength, block_stat.totalDataLength);
+    EXPECT_LE(block_stat.validIoUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
+    EXPECT_EQ(block_stat.totalUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
+    // print infos;
+    utStatFile<<test_name<<" ";
+    outputUTStats(block_stat, p_pmap);
+    printFTLInfo(p_pmap);
+    delete req.cd_info.pDisk;
+  };
+  GCTest("unit_test_lz4", SimpleSSD::CompressType::LZ4);
+  GCTest("unit_test_lzma", SimpleSSD::CompressType::LZMA);
 }
 
 class PageMappingConsistencyTestFixture : public BasicPageMappingTestFixture{
@@ -244,7 +255,7 @@ protected:
 };
 
 TEST_F(PageMappingConsistencyTestFixture, PageMappingConsistencyTest){
-  //TODO, Use test.cpp and PythonRuner
+  //TODO, Use test.cpp
 }
 
 

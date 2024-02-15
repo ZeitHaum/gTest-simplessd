@@ -98,6 +98,72 @@ bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out){
   return true;
 }
 
+SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, uint64_t superpage_cnt){
+  if(compress_type == SimpleSSD::CompressType::NONE){
+    assert(false && "Not support this type disk.");
+  }
+  const char* filename = "nvme.img";
+  if(access(filename, F_OK) != -1){
+    //remove file to make sure all '/0'
+    assert(remove(filename) == 0);
+  }
+  SimpleSSD::Disk* ret =  new SimpleSSD::CompressedDisk();
+  ret->open(img_file, superpage_cnt * ioUnitInPage* ioUnitSize, ioUnitSize);
+  ((SimpleSSD::CompressedDisk*)(ret))->init(ioUnitSize, compress_type);
+  return ret;
+}
+
+void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
+  //calculate   
+  StatAnalyzerOut outstats;
+  std::string input = "";
+  input += std::to_string(block_stat.totalDataLength) + "\n";
+  input += std::to_string(block_stat.validDataLength) + "\n";
+  input += std::to_string(block_stat.validIoUnitCount) + "\n";
+  input += std::to_string(block_stat.compressUnitCount) + "\n";
+  input += std::to_string(block_stat.totalUnitCount) + "\n";
+  std::string output = "";
+  std::string file_name = "statanalyzer.py";
+  assert(pyRun(file_name, input, output));
+  assert(parseStatAnalyzerOut(output, outstats));
+  //outputFile
+  std::string out = "| ";
+  out += std::to_string(pageCount);
+  out += " | ";
+  out += std::to_string(p_pmap->stat.gcCount);
+  out += " | ";
+  if(p_pmap->stat.totalReadIoUnitCount == 0){
+    out += "-";
+  }
+  else{
+    out += std::to_string((double)(p_pmap->stat.decompressCount) * 100.0D / (double)(p_pmap->stat.totalReadIoUnitCount)) + "%";
+  }
+  out += " | ";
+  if(p_pmap->stat.totalWriteIoUnitCount == 0){
+    out += "-";
+  }
+  else{
+    out += std::to_string((double)(p_pmap->stat.overwriteCompressUnitCount) * 100.0D / (double)(p_pmap->stat.totalWriteIoUnitCount)) + "%";
+  }
+  out += " | ";
+  out += std::to_string(block_stat.totalDataLength);
+  out += " | ";
+  out += std::to_string(block_stat.validDataLength);
+  out += " | ";
+  out += std::to_string(block_stat.totalUnitCount);
+  out += " | ";
+  out += std::to_string(block_stat.validIoUnitCount);
+  out += " | ";
+  out += std::to_string(block_stat.compressUnitCount);
+  out += " | ";
+  out += std::to_string(outstats.r_c * 100.0D) + "%";
+  out += " | ";
+  out += std::to_string(outstats.f_c * 100.0D) + "%";
+  out += " | ";
+  out += std::to_string(outstats.r_f * 100.0D) + "%";
+  utStatFile << out << std::endl;
+}
+
 //undef region
 #undef clear_ptr
 #undef is_ratio
