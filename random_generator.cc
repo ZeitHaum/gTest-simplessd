@@ -5,6 +5,7 @@
 
 std::random_device rd;  // 随机数种子
 std::mt19937 gen(rd()); // 使用 Mersenne Twister 引擎
+const uint32_t RANDOM_SEED = 42; // 使用统一的RANDOM_SEED给rand函数。
 
 // 生成 [l, r] 范围内的数据
 template <typename T>
@@ -36,4 +37,7 @@ void getRamdomVector(std::vector<T>& ret, T l, T r){
     }
 }
 
+uint8_t getRandomByte(){
+    return rand() % 256;
+}
 

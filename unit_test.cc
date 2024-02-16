@@ -33,7 +33,7 @@ void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap
   cfg_info->nPagesToInvalidate = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
 }
 
-void printFTLInfo(PageMapping* p_pmap){
+void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, const std::string &test_name) {
   std::vector<SimpleSSD::Stats> stats;
   std::vector<double> values;
   std::string prefix = "system.pc.ftl.page_mapping";
@@ -41,6 +41,8 @@ void printFTLInfo(PageMapping* p_pmap){
   p_pmap->getStatValues(values);
   ASSERT_EQ(values.size(), stats.size());
   utStatFile << "--------------------------------------" << std::endl;
+  utStatFile<<test_name<<" | "<< pageCount << " | ";;
+  outputUTStats(block_stat, p_pmap);
   printstat_ftlcnt++;
   utStatFile << "This is the " << printstat_ftlcnt << "-th output of FTL statistics data." << std::endl;
   for(size_t i = 0; i<values.size(); ++i){
@@ -98,7 +100,7 @@ bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out){
   return true;
 }
 
-SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, uint64_t superpage_cnt){
+SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, uint64_t superpage_cnt){
   if(compress_type == SimpleSSD::CompressType::NONE){
     assert(false && "Not support this type disk.");
   }
@@ -110,6 +112,21 @@ SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, uint64_t 
   SimpleSSD::Disk* ret =  new SimpleSSD::CompressedDisk();
   ret->open(img_file, superpage_cnt * ioUnitInPage* ioUnitSize, ioUnitSize);
   ((SimpleSSD::CompressedDisk*)(ret))->init(ioUnitSize, compress_type);
+  //all zero;
+  if(disk_init_policy == DiskInitPolicy::BYTE_RANDOM){
+    uint8_t buffer[1];
+    srand(RANDOM_SEED);// Seet seed
+    for(uint64_t offset = 0; offset<ret->diskSize; offset+=8){
+      buffer[0] = getRandomByte();
+      assert(ret->writeOrdinary(offset, 8, buffer) == 8);
+    }
+  }
+  else if(disk_init_policy == DiskInitPolicy::ALL_ZERO){
+    //do Nothing.
+  }
+  else{
+    assert(false && "Non't suppose this disk init policy.");
+  }
   return ret;
 }
 
@@ -128,8 +145,6 @@ void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
   assert(parseStatAnalyzerOut(output, outstats));
   //outputFile
   std::string out = "| ";
-  out += std::to_string(pageCount);
-  out += " | ";
   out += std::to_string(p_pmap->stat.gcCount);
   out += " | ";
   if(p_pmap->stat.totalReadIoUnitCount == 0){
@@ -162,6 +177,71 @@ void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
   out += " | ";
   out += std::to_string(outstats.r_f * 100.0D) + "%";
   utStatFile << out << std::endl;
+}
+
+void UTTestIterator::init(uint32_t all_pages){
+  all_comptype[0] = SimpleSSD::CompressType::LZ4;
+  all_comptype[1] = SimpleSSD::CompressType::LZMA;
+  all_dipolicy[0] = DiskInitPolicy::ALL_ZERO;
+  all_dipolicy[1] = DiskInitPolicy::BYTE_RANDOM;
+  all_dwpolicy[0] = DiskWritePolicy::ZERO;
+  all_dwpolicy[1] = DiskWritePolicy::BYTE_RANDOM;
+  all_writepages.clear();
+  for(uint32_t i = 1; i<= wrpage_split_factor; ++i){
+    all_writepages.push_back(all_pages * i / (1.0D * wrpage_split_factor));
+  }
+  iter_num = 0;
+}
+
+UTTestInfo UTTestIterator::getnextTestInfo(){
+  UTTestInfo ret;
+  uint32_t cp_itnum = iter_num;
+  ret.write_pages = all_writepages[iter_num % all_writepages.size()];
+  iter_num /= all_writepages.size();
+  ret.dwpolicy = all_dwpolicy[iter_num % 2];
+  iter_num /= 2;
+  ret.dipolicy = all_dipolicy[iter_num % 2];
+  iter_num /= 2;
+  ret.comptype = all_comptype[iter_num % 2];
+  iter_num = cp_itnum + 1;
+  return ret;
+}
+
+bool UTTestIterator::is_end(){
+  return iter_num == 8 * all_writepages.size();
+}
+
+std::string UTTestInfo::getTestName(){
+  std::string ret = "unit_test_";
+  if(comptype == SimpleSSD::CompressType::LZ4){
+    ret += "lz4_";
+  }
+  else if(comptype == SimpleSSD::CompressType::LZMA){
+    ret += "lzma_";
+  }
+  else {
+    assert(false && "Not support.");
+  }
+  if(dipolicy == DiskInitPolicy::ALL_ZERO){
+    ret += "Izero_";
+  }
+  else if(dipolicy == DiskInitPolicy::BYTE_RANDOM){
+    ret += "Irandom_";
+  }
+  else{
+    assert(false && "Not support.");
+  }
+  if(dwpolicy == DiskWritePolicy::ZERO){
+    ret += "Wzero_";
+  }
+  else if(dwpolicy == DiskWritePolicy::BYTE_RANDOM){
+    ret += "Wrandom_";
+  }
+  else{
+    assert(false && "Not support.");
+  }
+  ret += "P" + std::to_string(write_pages);
+  return ret;
 }
 
 //undef region
