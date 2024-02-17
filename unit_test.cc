@@ -41,7 +41,7 @@ void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, const std::st
   p_pmap->getStatValues(values);
   ASSERT_EQ(values.size(), stats.size());
   utStatFile << "--------------------------------------" << std::endl;
-  utStatFile<<test_name<<" | "<< pageCount << " | ";;
+  utStatFile<<"| "<<test_name<<" | "<< pageCount;;
   outputUTStats(block_stat, p_pmap);
   printstat_ftlcnt++;
   utStatFile << "This is the " << printstat_ftlcnt << "-th output of FTL statistics data." << std::endl;
@@ -175,7 +175,7 @@ void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
   out += " | ";
   out += std::to_string(outstats.f_c * 100.0D) + "%";
   out += " | ";
-  out += std::to_string(outstats.r_f * 100.0D) + "%";
+  out += std::to_string(outstats.r_f * 100.0D) + "% |";
   utStatFile << out << std::endl;
 }
 

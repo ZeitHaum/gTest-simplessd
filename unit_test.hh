@@ -31,7 +31,7 @@ enum class TestConfig{
 TestConfig test_cfg = TestConfig::SIMPLE;
 std::ofstream utStatFile("utstat.txt"); // output ut stats.
 uint64_t printstat_ftlcnt = 0;
-const uint64_t wrpage_split_factor = 8;
+const uint64_t wrpage_split_factor = 4;
 
 //declaration of neccessary structures.
 struct ConfigInfo{
@@ -144,13 +144,13 @@ protected:
         //called after every testsuit
     }
 
-    void SetUp(){
+    void SetUp() override {
       // called before every test
       remakeFTL(conf, p_ftl, p_pmap, p_dram, cfg_info);
       p_pmap->resetStatValues();
     }
 
-    void TearDown(){
+    void TearDown() override {
       // called after every test;
       clear_ptr(conf);
       clear_ptr(p_ftl);
@@ -246,6 +246,9 @@ TEST_F(PageMappingTestFixture, OverWriteTest){
 
 TEST_F(PageMappingTestFixture, GCTest){
   auto GCCompressTest = [&](std::string test_name, SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, DiskWritePolicy disk_write_policy, int write_pages){
+    //Clear LastTest Case.
+    this->TearDown();
+    this->SetUp();
     Request req = Request(ioUnitInPage);
     req.cd_info.offset = 0;
     req.cd_info.pDisk = createTestDisk(compress_type, disk_init_policy,cfg_info->nPagesToWarmup);
@@ -256,7 +259,7 @@ TEST_F(PageMappingTestFixture, GCTest){
     uint8_t buffer[65536]; // 64KiB
     memset(buffer, 0, 65536);
     srand(RANDOM_SEED);
-    for(uint64_t i = 1; i<=write_pages; ++i){
+    for(uint64_t i = 0; i<write_pages; ++i){
       req.lpn = i;
       p_pmap->write(req, tick);
       //Sync to Disk
