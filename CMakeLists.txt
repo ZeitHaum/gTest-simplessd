@@ -5,7 +5,9 @@ enable_testing()
 add_subdirectory(googletest)
 
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/simplessd
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/simplessd
+    ${PROJECT_SOURCE_DIR}/src
     ${gtest_SOURCE_DIR}/include 
     ${gtest_SOURCE_DIR}
     ${DRAMPOWER_SOURCE_DIR}
@@ -28,10 +30,14 @@ if (NOT EXISTS "${DRAMPOWER_SOURCE_DIR}/libdrampower/LibDRAMPower.h")
 Check you specified DRAMPower path by -DDRAMPOWER_SOURCE_DIR.")
 endif ()
 
-add_library(random_generator 
-    ${CMAKE_CURRENT_LIST_DIR}/random_generator.cc
+set(SRC_FILES
+    src/def.cc
+    src/random_generator.cc
+    src/utils.cc
+    src/unit_test.cc
+    src/utiterator.cc
 )
 
-add_executable(unit_test unit_test.cc)
+add_executable(unit_test ${SRC_FILES})
 target_compile_options(unit_test PRIVATE -fno-access-control)
-target_link_libraries(unit_test simplessd gtest_main random_generator drampower)
+target_link_libraries(unit_test simplessd gtest_main drampower)

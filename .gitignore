@@ -6,3 +6,4 @@ test
 *.img
 perf.data
 utstat.txt
+.vscode

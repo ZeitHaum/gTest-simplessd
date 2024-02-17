@@ -1,92 +1,12 @@
-//author: ZeitHaum
-#include "ftl/page_mapping.hh"
-#include "dram/simple.hh"
-#include "gtest/gtest.h"
-#include "random_generator.cc"
+#pragma once
+
 #include <thread>
-#include <fstream>
 #include <memory>
 #include <errno.h>
-#include <regex>
-
-using namespace SimpleSSD::FTL;
-
-//define region
-#define clear_ptr(ptr) if(ptr){ \
-  delete ptr; \
-  ptr = nullptr;\
-} 
-#define is_ratio(x) ((x) >= 0 && (x) <= 1)
-
-// global variables' defination
-const std::string actual_config_file = "./simplessd/config/samsung_983dct_1.92tb.cfg";
-const std::string simple_config_file = "./unit_test.cfg";
-const std::string img_file = "./nvme.img";
-uint64_t ioUnitInPage = 16;
-uint64_t pageCount = 768;
-uint64_t ioUnitSize = 4096;
-enum class TestConfig{
-    SIMPLE, ACTUAL
-};
-TestConfig test_cfg = TestConfig::SIMPLE;
-std::ofstream utStatFile("utstat.txt"); // output ut stats.
-uint64_t printstat_ftlcnt = 0;
-const uint64_t wrpage_split_factor = 4;
-
-//declaration of neccessary structures.
-struct ConfigInfo{
-  uint64_t nTotalLogicalPages;
-  uint64_t nPagesToWarmup;
-  uint64_t nPagesToInvalidate;
-};
-
-struct StatAnalyzerOut{
-  double r_c;
-  double f_c;
-  double r_f;
-};
-
-enum class DiskInitPolicy{
-  ALL_ZERO, BYTE_RANDOM
-};
-
-enum class DiskWritePolicy{
-  ZERO, BYTE_RANDOM
-};
-
-struct UTTestInfo{
-  SimpleSSD::CompressType comptype;
-  DiskWritePolicy dwpolicy;
-  DiskInitPolicy dipolicy;
-  uint32_t write_pages;
-  std::string getTestName();
-};
-
-class UTTestIterator{
-private:
-  SimpleSSD::CompressType all_comptype[2];
-  DiskWritePolicy all_dwpolicy[2];
-  DiskInitPolicy all_dipolicy[2];
-  uint64_t iter_num;
-public:
-  vector<uint32_t> all_writepages;
-  void init(uint32_t all_pages);
-  UTTestInfo getnextTestInfo();
-  bool is_end();
-};
-
-//declaration of neccessary help functions.
-void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap, SimpleSSD::DRAM::AbstractDRAM* &p_dram, ConfigInfo* &cfg_info);
-
-void printFTLInfo(PageMapping* p_pmap, const BlockStat& block_stat, const std::string &test_name);
-
-bool pyRun(const std::string file_name, const std::string input, std::string& output);
-
-bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out);
-
-SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, DiskInitPolicy, uint64_t superpage_cnt);
-
-void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap);
+#include "def.hh"
+#include "utils.hh"
+#include "utiterator.hh"
+#include "random_generator.hh"
 
 //Unit_test of help functions;
 TEST(PyRunTest, statAnalyzerTest){
@@ -130,28 +50,37 @@ protected:
     p_dram = nullptr;
     cfg_info = nullptr;
   }
+  void SetUp() override {
+    // called before every test
+    remakeFTL(conf, p_ftl, p_pmap, p_dram, cfg_info);
+    p_pmap->resetStatValues();
+  }
+
+  void TearDown() override {
+    // called after every test;
+    clear_ptr(conf);
+    clear_ptr(p_ftl);
+    clear_ptr(p_dram);
+    clear_ptr(cfg_info);
+  }
 };
 
 class PageMappingTestFixture: public BasicPageMappingTestFixture{
 protected:
-    static void SetUpTestCase()
-    {
-      //called before every testsuit
-    }
-
-    static void TearDownTestCase()
-    {
-        //called after every testsuit
-    }
-
     void SetUp() override {
       // called before every test
+    }
+
+    void init(){
       remakeFTL(conf, p_ftl, p_pmap, p_dram, cfg_info);
       p_pmap->resetStatValues();
     }
 
     void TearDown() override {
       // called after every test;
+    }
+
+    void clear(){
       clear_ptr(conf);
       clear_ptr(p_ftl);
       clear_ptr(p_dram);
@@ -159,7 +88,7 @@ protected:
     }
 };
 
-TEST_F(PageMappingTestFixture, NewWriteTest){
+TEST_F(BasicPageMappingTestFixture, NewWriteTest){
   //NewWriteTest
   Request req = Request(ioUnitInPage);
   int write_pages = pageCount;
@@ -184,7 +113,7 @@ TEST_F(PageMappingTestFixture, NewWriteTest){
   EXPECT_EQ(p_pmap->stat.totalWriteIoUnitCount, write_pages * ioUnitInPage);
 }
 
-TEST_F(PageMappingTestFixture, TrimTest){
+TEST_F(BasicPageMappingTestFixture, TrimTest){
   Request req = Request(ioUnitInPage);
   int trim_pages = pageCount;
   req.ioFlag.set();
@@ -211,10 +140,13 @@ TEST_F(PageMappingTestFixture, TrimTest){
 
 TEST_F(PageMappingTestFixture, OverWriteTest){
   auto GCOrdinaryTest = [&](uint32_t write_pages){
+    //remake FTL;
+    this->clear();
+    this->init();
     Request req = Request(ioUnitInPage);
     req.ioFlag.set();
     uint64_t tick = 0LL;
-    for(uint64_t i = 1; i<=write_pages; ++i){
+    for(uint64_t i = 0; i<write_pages; ++i){
       req.lpn = i;
       p_pmap->write(req, tick);
       if(i % (write_pages / 4) == 0){
@@ -238,7 +170,7 @@ TEST_F(PageMappingTestFixture, OverWriteTest){
     printFTLInfo(p_pmap, block_stat, test_name);
   };
   UTTestIterator ut_iter;
-  ut_iter.init(cfg_info->nTotalLogicalPages);
+  ut_iter.init(all_pages);
   for(uint16_t i = 0; i<wrpage_split_factor; ++i){
     GCOrdinaryTest(ut_iter.all_writepages[i]);
   }
@@ -246,9 +178,9 @@ TEST_F(PageMappingTestFixture, OverWriteTest){
 
 TEST_F(PageMappingTestFixture, GCTest){
   auto GCCompressTest = [&](std::string test_name, SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, DiskWritePolicy disk_write_policy, int write_pages){
-    //Clear LastTest Case.
-    this->TearDown();
-    this->SetUp();
+    //remake FTL;
+    this->clear();
+    this->init();
     Request req = Request(ioUnitInPage);
     req.cd_info.offset = 0;
     req.cd_info.pDisk = createTestDisk(compress_type, disk_init_policy,cfg_info->nPagesToWarmup);
@@ -297,7 +229,7 @@ TEST_F(PageMappingTestFixture, GCTest){
     delete req.cd_info.pDisk;
   };
   UTTestIterator ut_iter;
-  ut_iter.init(cfg_info->nTotalLogicalPages);
+  ut_iter.init(all_pages);
   while(!ut_iter.is_end()){
     UTTestInfo ut_info = ut_iter.getnextTestInfo();
     GCCompressTest(ut_info.getTestName(), ut_info.comptype, ut_info.dipolicy, ut_info.dwpolicy, ut_info.write_pages);
@@ -308,19 +240,13 @@ TEST_F(PageMappingTestFixture, GCTest){
 class PageMappingConsistencyTestFixture : public BasicPageMappingTestFixture{
 protected:
   void SetUp() override{
-    remakeFTL(conf, p_ftl, p_pmap, p_dram, cfg_info);
-    p_pmap->resetStatValues();
+    
   }
   void TearDown() override{
-    clear_ptr(conf);
-    clear_ptr(p_ftl);
-    clear_ptr(p_dram);
-    clear_ptr(cfg_info);
+    
   }
 };
 
 TEST_F(PageMappingConsistencyTestFixture, PageMappingConsistencyTest){
   //TODO, Use test.cpp
 }
-
-

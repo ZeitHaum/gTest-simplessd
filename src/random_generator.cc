@@ -1,7 +1,4 @@
-#include <random>
-#include <cstdint>
-#include "util/bitset.hh"
-#include <cassert>
+#include "random_generator.hh"
 
 std::random_device rd;  // 随机数种子
 std::mt19937 gen(rd()); // 使用 Mersenne Twister 引擎
