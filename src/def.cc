@@ -1,6 +1,5 @@
 #include "def.hh"
 
-
 // global variable assignment;
 const std::string actual_config_file = "./simplessd/config/samsung_983dct_1.92tb.cfg";
 const std::string simple_config_file = "./unit_test.cfg";

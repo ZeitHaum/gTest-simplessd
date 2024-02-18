@@ -9,11 +9,19 @@
 #include <csignal>
 #include "assert.h"
 
+struct TableConsistencyMeta
+{
+    uint64_t size;
+    bool all_valid;// if all mapping is valid block.
+    bool disklen_consist;// if all length is match disk.
+};
+
+
 class GCSharedObject{
-    //No complex object.
-    bool disk_content_ckres;
-    bool block_stat_ckres;
-    bool table_meta_ckres;
+    //No complex object, check stats, table, disk.
+    BlockStat block_stat;
+    TableConsistencyMeta table_meta;
+    ConfigInfo cfg_info;
     GCSharedObject();
 };
 
@@ -28,12 +36,13 @@ public:
     GCChildObject();
     void init();
     void run();
-    void check(GCSharedObject* pgc_sharedobj);
 };
 
 void cSigTermHandler(int signum);
 void pSigUsr1Handler(int signum);
 void runGCConsistencyTest();
+void check(GCSharedObject* pgc_sharedobj);
+void writeShareObject(GCSharedObject* pgc_sharedobj, GCChildObject* pgc_childobj);
 
 extern GCChildObject* pgc_childobj;
 extern GCSharedObject* pgc_sharedobj;

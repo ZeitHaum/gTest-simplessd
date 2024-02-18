@@ -7,6 +7,7 @@
 #include "utils.hh"
 #include "utiterator.hh"
 #include "random_generator.hh"
+#include "consistency.hh"
 
 //Unit_test of help functions;
 TEST(PyRunTest, statAnalyzerTest){
@@ -237,16 +238,13 @@ TEST_F(PageMappingTestFixture, GCTest){
   }
 }
 
-class PageMappingConsistencyTestFixture : public BasicPageMappingTestFixture{
-protected:
-  void SetUp() override{
-    
+TEST(ConsistencyTest, GCConsistencyTest){
+  const int ITER_NUM = 100;
+  for(uint32_t i = 1; i<=ITER_NUM; ++i){
+    clear_ptr(pgc_childobj);
+    pgc_sharedobj = nullptr;
+    runGCConsistencyTest();
+    check(pgc_sharedobj);
+    std::cout << "ConsistencyTest Passed "<< i << "/" << ITER_NUM << std::endl;
   }
-  void TearDown() override{
-    
-  }
-};
-
-TEST_F(PageMappingConsistencyTestFixture, PageMappingConsistencyTest){
-  //TODO, Use test.cpp
 }

@@ -36,6 +36,7 @@ set(SRC_FILES
     src/utils.cc
     src/unit_test.cc
     src/utiterator.cc
+    src/consistency.cc
 )
 
 add_executable(unit_test ${SRC_FILES})
