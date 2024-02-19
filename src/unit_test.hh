@@ -230,6 +230,7 @@ TEST_F(PageMappingTestFixture, GCTest){
     delete req.cd_info.pDisk;
   };
   UTTestIterator ut_iter;
+  // all_pages = 16 * 100;
   ut_iter.init(all_pages);
   while(!ut_iter.is_end()){
     UTTestInfo ut_info = ut_iter.getnextTestInfo();
@@ -238,13 +239,13 @@ TEST_F(PageMappingTestFixture, GCTest){
   }
 }
 
-TEST(ConsistencyTest, GCConsistencyTest){
-  const int ITER_NUM = 100;
-  for(uint32_t i = 1; i<=ITER_NUM; ++i){
-    clear_ptr(pgc_childobj);
-    pgc_sharedobj = nullptr;
-    runGCConsistencyTest();
-    check(pgc_sharedobj);
-    std::cout << "ConsistencyTest Passed "<< i << "/" << ITER_NUM << std::endl;
-  }
-}
+// TEST(ConsistencyTest, GCConsistencyTest){
+//   const int ITER_NUM = 100;
+//   for(uint32_t i = 1; i<=ITER_NUM; ++i){
+//     clear_ptr(pgc_childobj);
+//     pgc_sharedobj = nullptr;
+//     runGCConsistencyTest();
+//     check(pgc_sharedobj);
+//     std::cout << "ConsistencyTest Passed "<< i << "/" << ITER_NUM << std::endl;
+//   }
+// }

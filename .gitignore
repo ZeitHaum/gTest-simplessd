@@ -7,3 +7,5 @@ test
 perf.data
 utstat.txt
 .vscode
+perf.data.old
+test.py
