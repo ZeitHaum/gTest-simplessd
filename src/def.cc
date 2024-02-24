@@ -11,4 +11,4 @@ uint64_t all_pages = 0;
 TestConfig test_cfg = TestConfig::SIMPLE;
 std::ofstream utStatFile("utstat.txt"); // output ut stats.
 uint64_t printstat_ftlcnt = 0;
-const uint64_t wrpage_split_factor = 4;
+const uint64_t wrpage_split_factor = 1;

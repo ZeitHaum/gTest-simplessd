@@ -220,7 +220,15 @@ TEST_F(PageMappingTestFixture, GCTest){
     EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
     EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
     EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
-    EXPECT_GT(block_stat.compressUnitCount, 0);
+    if(disk_write_policy == DiskWritePolicy::ZERO){
+      EXPECT_GT(block_stat.compressUnitCount, 0);
+    }
+    else if(disk_write_policy == DiskWritePolicy::BYTE_RANDOM){
+      EXPECT_EQ(block_stat.compressUnitCount, 0);
+    }
+    else{
+      assert(false && "Not support yet.");
+    }
     EXPECT_EQ(block_stat.totalDataLength, ioUnitInPage * ioUnitSize * cfg_info->nPagesToWarmup);
     EXPECT_LE(block_stat.validDataLength, block_stat.totalDataLength);
     EXPECT_LE(block_stat.validIoUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
@@ -229,9 +237,8 @@ TEST_F(PageMappingTestFixture, GCTest){
     printFTLInfo(p_pmap, block_stat, test_name);
     delete req.cd_info.pDisk;
   };
-  UTTestIterator ut_iter;
-  // all_pages = 16 * 100;
-  ut_iter.init(all_pages);
+  UTTestIterator ut_iter = UTTestIterator(false);
+  ut_iter.init(pageCount * 100);
   while(!ut_iter.is_end()){
     UTTestInfo ut_info = ut_iter.getnextTestInfo();
     GCCompressTest(ut_info.getTestName(), ut_info.comptype, ut_info.dipolicy, ut_info.dwpolicy, ut_info.write_pages);
@@ -239,13 +246,31 @@ TEST_F(PageMappingTestFixture, GCTest){
   }
 }
 
-// TEST(ConsistencyTest, GCConsistencyTest){
-//   const int ITER_NUM = 100;
-//   for(uint32_t i = 1; i<=ITER_NUM; ++i){
-//     clear_ptr(pgc_childobj);
-//     pgc_sharedobj = nullptr;
-//     runGCConsistencyTest();
-//     check(pgc_sharedobj);
-//     std::cout << "ConsistencyTest Passed "<< i << "/" << ITER_NUM << std::endl;
-//   }
-// }
+TEST(RegularTest, CompressRatioTest){
+  SimpleSSD::LZ4Compressor lz4_comp = SimpleSSD::LZ4Compressor();
+  SimpleSSD::LzmaCompressor lzma_comp = SimpleSSD::LzmaCompressor();
+  uint8_t lz4input[ioUnitSize];
+  uint8_t lzmainput[ioUnitSize];
+  uint64_t lz4_totallen = 0;
+  uint64_t lzma_totallen = 0;
+  const int ITER_NUM = 10000;
+  srand(RANDOM_SEED);
+  for(uint32_t itn = 1; itn <= ITER_NUM; ++itn){
+    for(uint32_t i = 0; i<ioUnitSize; ++i){
+      lz4input[i] = getRandomByte();
+    }
+    memcpy(lzmainput, lz4input, ioUnitSize);
+    uint64_t lz4_destlen = 0;
+    uint64_t lzma_destlen = 0;
+    lz4_comp.compress(lz4input, ioUnitSize, lz4_destlen);
+    lzma_comp.compress(lzmainput, ioUnitSize, lzma_destlen);
+    lz4_destlen = min(ioUnitSize, lz4_destlen);
+    lzma_destlen = min(ioUnitSize, lzma_destlen);
+    lz4_totallen += lz4_destlen;
+    lzma_totallen += lzma_destlen;
+    if(itn % (ITER_NUM / 10) == 0){
+      EXPECT_EQ((double)(lz4_totallen * 100) / (double)(itn * ioUnitSize), 100);
+      EXPECT_EQ((double)(lzma_totallen * 100) / (double)(itn * ioUnitSize), 100);
+    }
+  }
+}

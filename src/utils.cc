@@ -3,6 +3,8 @@
 /**
   *implementation of help functions.
 **/
+std::string split_line = "--------------------------------------------------";
+
 void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap, SimpleSSD::DRAM::AbstractDRAM* &p_dram, ConfigInfo* &cfg_info){
   clear_ptr(conf);
   clear_ptr(p_ftl);
@@ -115,11 +117,13 @@ SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, DiskInitP
   ((SimpleSSD::CompressedDisk*)(ret))->init(ioUnitSize, compress_type);
   //all zero;
   if(disk_init_policy == DiskInitPolicy::BYTE_RANDOM){
-    uint8_t buffer[1];
+    uint8_t buffer[4096];
     srand(RANDOM_SEED);// Seet seed
-    for(uint64_t offset = 0; offset<ret->diskSize; offset+=8){
-      buffer[0] = getRandomByte();
-      assert(ret->writeOrdinary(offset, 8, buffer) == 8);
+    for(uint64_t offset = 0; offset<ret->diskSize; offset+=4096){
+      for(uint32_t i = 0; i< 4096; ++i){
+        buffer[i] = getRandomByte();
+      }
+      assert(ret->writeOrdinary(offset, 4096, buffer) == 4096);
     }
   }
   else if(disk_init_policy == DiskInitPolicy::ALL_ZERO){

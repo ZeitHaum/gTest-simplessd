@@ -9,6 +9,8 @@ struct UTTestInfo{
   DiskInitPolicy dipolicy;
   uint32_t write_pages;
   std::string getTestName();
+  UTTestInfo();
+  UTTestInfo(SimpleSSD::CompressType ctype, DiskWritePolicy dw, DiskInitPolicy di, uint32_t wp);
 };
 
 class UTTestIterator{
@@ -17,7 +19,11 @@ private:
   DiskWritePolicy all_dwpolicy[2];
   DiskInitPolicy all_dipolicy[2];
   uint64_t iter_num;
+  uint64_t total_count;
+  bool enable_di;
 public:
+  UTTestIterator();
+  UTTestIterator(bool en_di);
   std::vector<uint32_t> all_writepages;
   void init(uint32_t all_pages);
   UTTestInfo getnextTestInfo();
