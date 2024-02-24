@@ -112,7 +112,7 @@ TEST_F(BasicPageMappingTestFixture, TrimTest){
 
 TEST_F(PageMappingTestFixture, OverWriteTest){
   UTTestIterator ut_iter;
-  ut_iter.init(all_pages);
+  ut_iter.init(pageCount * 100);
   for(uint16_t i = 0; i<wrpage_split_factor; ++i){
     GCOrdinaryTest(ut_iter.all_writepages[i]);
   }
