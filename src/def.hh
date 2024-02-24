@@ -39,7 +39,7 @@ enum class DiskInitPolicy{
 };
 
 enum class DiskWritePolicy{
-  ZERO, BYTE_RANDOM, 
+  ZERO, BYTE_RANDOM, CUSTOM, 
 };
 
 enum class TestConfig{
