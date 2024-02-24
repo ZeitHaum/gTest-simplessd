@@ -20,6 +20,7 @@ using namespace SimpleSSD::FTL;
   ptr = nullptr;\
 } 
 #define is_ratio(x) ((x) >= 0 && (x) <= 1)
+#define get_percent(x, y) ((double)(x * 100) / (double)(y))
 
 //declaration of neccessary structures.
 struct ConfigInfo{

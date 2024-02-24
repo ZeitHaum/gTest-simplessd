@@ -36,7 +36,7 @@ void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap
   cfg_info->nPagesToInvalidate = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
 }
 
-void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, const std::string &test_name) {
+void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, std::string test_name) {
   std::vector<SimpleSSD::Stats> stats;
   std::vector<double> values;
   std::string prefix = "system.pc.ftl.page_mapping";

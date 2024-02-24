@@ -9,7 +9,7 @@ extern std::string split_line;
 
 void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap, SimpleSSD::DRAM::AbstractDRAM* &p_dram, ConfigInfo* &cfg_info);
 
-void printFTLInfo(PageMapping* p_pmap, const BlockStat& block_stat, const std::string &test_name);
+void printFTLInfo(PageMapping* p_pmap, const BlockStat& block_stat, std::string test_name);
 
 bool pyRun(const std::string file_name, const std::string input, std::string& output);
 

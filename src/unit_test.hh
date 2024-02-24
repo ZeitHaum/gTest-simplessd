@@ -50,14 +50,14 @@ protected:
 };
 
 class PageMappingTestFixture: public BasicPageMappingTestFixture{
-protected:
+protected: 
   void SetUp() override;
   void TearDown() override;
   void init();
   void clear();
   void reset();
   void GCOrdinaryTest(uint32_t write_pages);
-  void GCCompressTest(std::string test_name, SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, DiskWritePolicy disk_write_policy, int write_pages);
+  void GCCompressTest(UTTestInfo& test_info);
 };
 
 TEST_F(BasicPageMappingTestFixture, NewWriteTest){
@@ -123,7 +123,7 @@ TEST_F(PageMappingTestFixture, GCTest){
   ut_iter.init(pageCount * 100);
   while(!ut_iter.is_end()){
     UTTestInfo ut_info = ut_iter.getnextTestInfo();
-    GCCompressTest(ut_info.getTestName(), ut_info.comptype, ut_info.dipolicy, ut_info.dwpolicy, ut_info.write_pages);
+    GCCompressTest(ut_info);
     std::cout <<"Finished test:"<< ut_info.getTestName() << std::endl;
   }
 }
@@ -151,13 +151,53 @@ TEST(RegularTest, CompressRatioTest){
     lz4_totallen += lz4_destlen;
     lzma_totallen += lzma_destlen;
     if(itn % (ITER_NUM / 10) == 0){
-      EXPECT_EQ((double)(lz4_totallen * 100) / (double)(itn * ioUnitSize), 100);
-      EXPECT_EQ((double)(lzma_totallen * 100) / (double)(itn * ioUnitSize), 100);
+      EXPECT_EQ(get_percent(lz4_totallen, itn*ioUnitSize), 100);
+      EXPECT_EQ(get_percent(lzma_totallen, itn*ioUnitSize), 100);
     }
   }
 }
 
 TEST_F(PageMappingTestFixture, GCCompressRatioTest){
   //Get Compress Data
-
+  uint8_t test_data[65536];
+  memset(test_data, 0, 65536);
+  srand(RANDOM_SEED);
+  for(uint32_t i = 0; i<64; ++i){
+      uint32_t pos = rand() % 4096;
+      test_data[pos] = rand() % 256;
+  }
+  for(uint32_t i = 1; i<16; ++i){
+    memcpy(test_data + i*4096, test_data, 4096);
+  }
+  //Get Compress Ratio
+  double lz4_percent = 0.0D;
+  double lzma_percent = 0.0D;
+  uint64_t lz4_totallen = 0;
+  uint64_t lzma_totallen = 0;
+  uint64_t lz4_destlen = 0;
+  uint64_t lzma_destlen = 0;
+  SimpleSSD::LZ4Compressor lz4_comp = SimpleSSD::LZ4Compressor();
+  SimpleSSD::LzmaCompressor lzma_comp = SimpleSSD::LzmaCompressor();
+  lz4_comp.compress(test_data, 4096, lz4_destlen);
+  lzma_comp.compress(test_data, 4096, lzma_destlen);
+  lz4_percent = get_percent(lz4_destlen, 4096);
+  lzma_percent = get_percent(lzma_destlen, 4096);
+  //Check Average
+  for(uint32_t i = 0; i<16; ++i){
+    lz4_comp.compress(test_data + i * 4096, 4096, lz4_destlen);
+    lzma_comp.compress(test_data + i * 4096, 4096, lzma_destlen);
+    lz4_totallen += lz4_destlen;
+    lzma_totallen += lzma_destlen;
+  }
+  EXPECT_EQ(get_percent(lz4_totallen, 4096*16), lz4_percent);
+  EXPECT_EQ(get_percent(lzma_totallen, 4096*16), lzma_percent);
+  std::cout << "Standard lz4_percent:" << lz4_percent << "\n";
+  std::cout << "Standard lzma_percent:" << lzma_percent << "\n";
+  //SimpleSSD Compress
+  UTTestInfo ut_info = UTTestInfo(SimpleSSD::CompressType::LZ4, DiskWritePolicy::CUSTOM, DiskInitPolicy::ALL_ZERO, pageCount * 100, test_data);
+  GCCompressTest(ut_info);
+  std::cout <<"Finished test:"<< ut_info.getTestName() << std::endl;
+  ut_info.comptype = SimpleSSD::CompressType::LZMA;
+  GCCompressTest(ut_info);
+  std::cout <<"Finished test:"<< ut_info.getTestName() << std::endl;
 }

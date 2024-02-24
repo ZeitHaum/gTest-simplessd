@@ -1,9 +1,11 @@
 #include "utiterator.hh"
 
-UTTestInfo::UTTestInfo(){}
+UTTestInfo::UTTestInfo()
+:write_data(nullptr)
+{}
 
-UTTestInfo::UTTestInfo(SimpleSSD::CompressType ctype, DiskWritePolicy dw, DiskInitPolicy di, uint32_t wp)
-:comptype(ctype), dwpolicy(dw), dipolicy(di), write_pages(wp)
+UTTestInfo::UTTestInfo(SimpleSSD::CompressType ctype, DiskWritePolicy dw, DiskInitPolicy di, uint32_t wp, uint8_t* wr_data)
+:comptype(ctype), dwpolicy(dw), dipolicy(di), write_pages(wp), write_data(wr_data)
 {}
 
 std::string UTTestInfo::getTestName(){
@@ -31,6 +33,9 @@ std::string UTTestInfo::getTestName(){
   }
   else if(dwpolicy == DiskWritePolicy::BYTE_RANDOM){
     ret += "Wrandom_";
+  }
+  else if(dwpolicy == DiskWritePolicy::CUSTOM){
+    ret += "Wcostum_";
   }
   else{
     assert(false && "Not support.");

@@ -73,16 +73,15 @@ void PageMappingTestFixture::GCOrdinaryTest(uint32_t write_pages){
   EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
   EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
   EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
-  const std::string test_name = "unit_test_none_P" + std::to_string(write_pages);
-  printFTLInfo(p_pmap, block_stat, test_name);
+  printFTLInfo(p_pmap, block_stat, "unit_test_none_P" + std::to_string(write_pages));
 }
 
-void PageMappingTestFixture::GCCompressTest(std::string test_name, SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, DiskWritePolicy disk_write_policy, int write_pages){
+void PageMappingTestFixture::GCCompressTest(UTTestInfo& test_info){
   //remake FTL;
   reset();
   Request req = Request(ioUnitInPage);
   req.cd_info.offset = 0;
-  req.cd_info.pDisk = createTestDisk(compress_type, disk_init_policy,cfg_info->nPagesToWarmup);
+  req.cd_info.pDisk = createTestDisk(test_info.comptype, test_info.dipolicy,cfg_info->nPagesToWarmup);
   EXPECT_GE(((SimpleSSD::CompressedDisk*)(req.cd_info.pDisk))->compress_unit_totalcnt, cfg_info->nPagesToWarmup * ioUnitInPage);
   req.ioFlag.set();
   uint64_t tick = 0LL;
@@ -90,24 +89,27 @@ void PageMappingTestFixture::GCCompressTest(std::string test_name, SimpleSSD::Co
   uint8_t buffer[65536]; // 64KiB
   memset(buffer, 0, 65536);
   srand(RANDOM_SEED);
-  for(uint64_t i = 0; i<write_pages; ++i){
+  for(uint64_t i = 0; i<test_info.write_pages; ++i){
     req.lpn = i;
     p_pmap->write(req, tick);
     //Sync to Disk
-    if(disk_write_policy == DiskWritePolicy::BYTE_RANDOM){
+    if(test_info.dwpolicy == DiskWritePolicy::BYTE_RANDOM){
       for(uint32_t i = 0; i<65536; ++i){
         buffer[i] = getRandomByte();
       }
     }
-    else if(disk_write_policy == DiskWritePolicy::ZERO){
+    else if(test_info.dwpolicy == DiskWritePolicy::ZERO){
       //Do Nothing.
+    }
+    else if(test_info.dwpolicy == DiskWritePolicy::CUSTOM){
+      memcpy(buffer, test_info.write_data, 65536);
     }
     else{
       assert(false && "Not support this disk write policy.");
     }
     req.cd_info.pDisk->writeOrdinary(req.lpn*65536, 65536, buffer);
-    if(i % (write_pages / 4) == 0){
-      std::cout <<"gcTest-Finished pages: " << i << "/" << write_pages << std::endl;
+    if(i % (test_info.write_pages / 4) == 0){
+      std::cout <<"gcTest-Finished pages: " << i << "/" << test_info.write_pages << std::endl;
     }
   }
   BlockStat block_stat = p_pmap->calculateBlockStat();
@@ -117,11 +119,11 @@ void PageMappingTestFixture::GCCompressTest(std::string test_name, SimpleSSD::Co
   EXPECT_GE(p_pmap->stat.overwriteCompressUnitCount, 0);
   EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
   EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
-  EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * write_pages);
-  if(disk_write_policy == DiskWritePolicy::ZERO){
+  EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * test_info.write_pages);
+  if(test_info.dwpolicy == DiskWritePolicy::ZERO || test_info.dwpolicy == DiskWritePolicy::CUSTOM){
     EXPECT_GT(block_stat.compressUnitCount, 0);
   }
-  else if(disk_write_policy == DiskWritePolicy::BYTE_RANDOM){
+  else if(test_info.dwpolicy == DiskWritePolicy::BYTE_RANDOM){
     EXPECT_EQ(block_stat.compressUnitCount, 0);
   }
   else{
@@ -132,7 +134,7 @@ void PageMappingTestFixture::GCCompressTest(std::string test_name, SimpleSSD::Co
   EXPECT_LE(block_stat.validIoUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
   EXPECT_EQ(block_stat.totalUnitCount, ioUnitInPage * cfg_info->nPagesToWarmup);
   // print infos;
-  printFTLInfo(p_pmap, block_stat, test_name);
+  printFTLInfo(p_pmap, block_stat, test_info.getTestName());
   delete req.cd_info.pDisk;
 }
 
@@ -169,3 +171,4 @@ int main(int argc, char **argv) {
 //undef region
 #undef clear_ptr
 #undef is_ratio
+#undef get_percent

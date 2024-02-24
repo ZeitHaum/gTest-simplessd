@@ -8,9 +8,10 @@ struct UTTestInfo{
   DiskWritePolicy dwpolicy;
   DiskInitPolicy dipolicy;
   uint32_t write_pages;
+  uint8_t* write_data;
   std::string getTestName();
   UTTestInfo();
-  UTTestInfo(SimpleSSD::CompressType ctype, DiskWritePolicy dw, DiskInitPolicy di, uint32_t wp);
+  UTTestInfo(SimpleSSD::CompressType ctype, DiskWritePolicy dw, DiskInitPolicy di, uint32_t wp, uint8_t* = nullptr);
 };
 
 class UTTestIterator{
