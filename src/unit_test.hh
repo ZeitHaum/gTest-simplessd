@@ -114,8 +114,9 @@ TEST_F(PageMappingTestFixture, OverWriteTest){
   // UTTestIterator ut_iter;
   // ut_iter.init(pageCount * 100);
   init();
+  pageCount = 768;
   SimpleSSD::initCPU(*conf);
-  GCOrdinaryTest(pageCount * 100);
+  GCOrdinaryTest(pageCount*100);
   // for(uint16_t i = 0; i<wrpage_split_factor; ++i){
   // }
 }
