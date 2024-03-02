@@ -36,7 +36,7 @@ void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap
   cfg_info->nPagesToInvalidate = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
 }
 
-void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, std::string test_name) {
+void printFTLInfo(PageMapping* p_pmap, std::string test_name) {
   std::vector<SimpleSSD::Stats> stats;
   std::vector<double> values;
   std::string prefix = "system.pc.ftl.page_mapping";
@@ -45,7 +45,7 @@ void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, std::string t
   ASSERT_EQ(values.size(), stats.size());
   utStatFile << "--------------------------------------" << std::endl;
   utStatFile<<"| "<<test_name<<" | "<< pageCount;;
-  outputUTStats(block_stat, p_pmap);
+  // outputUTStats(block_stat, p_pmap);
   printstat_ftlcnt++;
   utStatFile << "This is the " << printstat_ftlcnt << "-th output of FTL statistics data." << std::endl;
   for(size_t i = 0; i<values.size(); ++i){
@@ -103,83 +103,83 @@ bool parseStatAnalyzerOut(const std::string& output, StatAnalyzerOut& out){
   return true;
 }
 
-SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, uint64_t superpage_cnt){
-  if(compress_type == SimpleSSD::CompressType::NONE){
-    assert(false && "Not support this type disk.");
-  }
-  const char* filename = "nvme.img";
-  if(access(filename, F_OK) != -1){
-    //remove file to make sure all '/0'
-    assert(remove(filename) == 0);
-  }
-  SimpleSSD::Disk* ret =  new SimpleSSD::CompressedDisk();
-  ret->open(img_file, superpage_cnt * ioUnitInPage* ioUnitSize, ioUnitSize);
-  ((SimpleSSD::CompressedDisk*)(ret))->init(ioUnitSize, compress_type);
-  //all zero;
-  if(disk_init_policy == DiskInitPolicy::BYTE_RANDOM){
-    uint8_t buffer[4096];
-    srand(RANDOM_SEED);// Seet seed
-    for(uint64_t offset = 0; offset<ret->diskSize; offset+=4096){
-      for(uint32_t i = 0; i< 4096; ++i){
-        buffer[i] = getRandomByte();
-      }
-      assert(ret->writeOrdinary(offset, 4096, buffer) == 4096);
-    }
-  }
-  else if(disk_init_policy == DiskInitPolicy::ALL_ZERO){
-    //do Nothing.
-  }
-  else{
-    assert(false && "Non't suppose this disk init policy.");
-  }
-  return ret;
-}
+// SimpleSSD::Disk* createTestDisk(SimpleSSD::CompressType compress_type, DiskInitPolicy disk_init_policy, uint64_t superpage_cnt){
+//   if(compress_type == SimpleSSD::CompressType::NONE){
+//     assert(false && "Not support this type disk.");
+//   }
+//   const char* filename = "nvme.img";
+//   if(access(filename, F_OK) != -1){
+//     //remove file to make sure all '/0'
+//     assert(remove(filename) == 0);
+//   }
+//   SimpleSSD::Disk* ret =  new SimpleSSD::CompressedDisk();
+//   ret->open(img_file, superpage_cnt * ioUnitInPage* ioUnitSize, ioUnitSize);
+//   ((SimpleSSD::CompressedDisk*)(ret))->init(ioUnitSize, compress_type);
+//   //all zero;
+//   if(disk_init_policy == DiskInitPolicy::BYTE_RANDOM){
+//     uint8_t buffer[4096];
+//     srand(RANDOM_SEED);// Seet seed
+//     for(uint64_t offset = 0; offset<ret->diskSize; offset+=4096){
+//       for(uint32_t i = 0; i< 4096; ++i){
+//         buffer[i] = getRandomByte();
+//       }
+//       assert(ret->writeOrdinary(offset, 4096, buffer) == 4096);
+//     }
+//   }
+//   else if(disk_init_policy == DiskInitPolicy::ALL_ZERO){
+//     //do Nothing.
+//   }
+//   else{
+//     assert(false && "Non't suppose this disk init policy.");
+//   }
+//   return ret;
+// }
 
-void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
-  //calculate   
-  StatAnalyzerOut outstats;
-  std::string input = "";
-  input += std::to_string(block_stat.totalDataLength) + "\n";
-  input += std::to_string(block_stat.validDataLength) + "\n";
-  input += std::to_string(block_stat.validIoUnitCount) + "\n";
-  input += std::to_string(block_stat.compressUnitCount) + "\n";
-  input += std::to_string(block_stat.totalUnitCount) + "\n";
-  std::string output = "";
-  std::string file_name = "statanalyzer.py";
-  assert(pyRun(file_name, input, output));
-  assert(parseStatAnalyzerOut(output, outstats));
-  //outputFile
-  std::string out = "| ";
-  out += std::to_string(p_pmap->stat.gcCount);
-  out += " | ";
-  if(p_pmap->stat.totalReadIoUnitCount == 0){
-    out += "-";
-  }
-  else{
-    out += std::to_string((double)(p_pmap->stat.decompressCount) * 100.0D / (double)(p_pmap->stat.totalReadIoUnitCount)) + "%";
-  }
-  out += " | ";
-  if(p_pmap->stat.totalWriteIoUnitCount == 0){
-    out += "-";
-  }
-  else{
-    out += std::to_string((double)(p_pmap->stat.overwriteCompressUnitCount) * 100.0D / (double)(p_pmap->stat.totalWriteIoUnitCount)) + "%";
-  }
-  out += " | ";
-  out += std::to_string(block_stat.totalDataLength);
-  out += " | ";
-  out += std::to_string(block_stat.validDataLength);
-  out += " | ";
-  out += std::to_string(block_stat.totalUnitCount);
-  out += " | ";
-  out += std::to_string(block_stat.validIoUnitCount);
-  out += " | ";
-  out += std::to_string(block_stat.compressUnitCount);
-  out += " | ";
-  out += std::to_string(outstats.r_c * 100.0D) + "%";
-  out += " | ";
-  out += std::to_string(outstats.f_c * 100.0D) + "%";
-  out += " | ";
-  out += std::to_string(outstats.r_f * 100.0D) + "% |";
-  utStatFile << out << std::endl;
-}
+// void outputUTStats(const BlockStat& block_stat, PageMapping* p_pmap){
+//   //calculate   
+//   StatAnalyzerOut outstats;
+//   std::string input = "";
+//   input += std::to_string(block_stat.totalDataLength) + "\n";
+//   input += std::to_string(block_stat.validDataLength) + "\n";
+//   input += std::to_string(block_stat.validIoUnitCount) + "\n";
+//   input += std::to_string(block_stat.compressUnitCount) + "\n";
+//   input += std::to_string(block_stat.totalUnitCount) + "\n";
+//   std::string output = "";
+//   std::string file_name = "statanalyzer.py";
+//   assert(pyRun(file_name, input, output));
+//   assert(parseStatAnalyzerOut(output, outstats));
+//   //outputFile
+//   std::string out = "| ";
+//   out += std::to_string(p_pmap->stat.gcCount);
+//   out += " | ";
+//   if(p_pmap->stat.totalReadIoUnitCount == 0){
+//     out += "-";
+//   }
+//   else{
+//     out += std::to_string((double)(p_pmap->stat.decompressCount) * 100.0D / (double)(p_pmap->stat.totalReadIoUnitCount)) + "%";
+//   }
+//   out += " | ";
+//   if(p_pmap->stat.totalWriteIoUnitCount == 0){
+//     out += "-";
+//   }
+//   else{
+//     out += std::to_string((double)(p_pmap->stat.overwriteCompressUnitCount) * 100.0D / (double)(p_pmap->stat.totalWriteIoUnitCount)) + "%";
+//   }
+//   out += " | ";
+//   out += std::to_string(block_stat.totalDataLength);
+//   out += " | ";
+//   out += std::to_string(block_stat.validDataLength);
+//   out += " | ";
+//   out += std::to_string(block_stat.totalUnitCount);
+//   out += " | ";
+//   out += std::to_string(block_stat.validIoUnitCount);
+//   out += " | ";
+//   out += std::to_string(block_stat.compressUnitCount);
+//   out += " | ";
+//   out += std::to_string(outstats.r_c * 100.0D) + "%";
+//   out += " | ";
+//   out += std::to_string(outstats.f_c * 100.0D) + "%";
+//   out += " | ";
+//   out += std::to_string(outstats.r_f * 100.0D) + "% |";
+//   utStatFile << out << std::endl;
+// }
