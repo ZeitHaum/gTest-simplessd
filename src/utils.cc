@@ -34,6 +34,7 @@ void remakeFTL(SimpleSSD::ConfigReader* &conf, FTL* &p_ftl, PageMapping* &p_pmap
   all_pages = cfg_info->nTotalLogicalPages;
   cfg_info->nPagesToWarmup = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_FILL_RATIO);
   cfg_info->nPagesToInvalidate = cfg_info->nTotalLogicalPages * p_pmap->conf.readFloat(SimpleSSD::CONFIG_FTL, FTL_INVALID_PAGE_RATIO);
+  SimpleSSD::initCPU(*conf);
 }
 
 void printFTLInfo(PageMapping* p_pmap,const BlockStat& block_stat, std::string test_name) {
