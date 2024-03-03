@@ -57,7 +57,7 @@ void PageMappingTestFixture::GCOrdinaryTest(uint32_t write_pages){
     req.lpn = i;
     p_pmap->write(req, tick);
     if(i % (write_pages / 4) == 0){
-      std::cout <<"OverWriteTest-Finished pages: " << i << "/" << write_pages << std::endl;
+      std::cout <<"GCOrdinaryTest-Finished write pages: " << i << "/" << write_pages << std::endl;
     }
   }
   BlockStat block_stat = p_pmap->calculateBlockStat();
@@ -109,16 +109,26 @@ void PageMappingTestFixture::GCCompressTest(UTTestInfo& test_info){
     }
     req.cd_info.pDisk->writeOrdinary(req.lpn*65536, 65536, buffer);
     if(i % (test_info.write_pages / 4) == 0){
-      std::cout <<"gcTest-Finished pages: " << i << "/" << test_info.write_pages << std::endl;
+      std::cout <<"GCCompressTest-Finished write pages: " << i << "/" << test_info.write_pages << std::endl;
+    }
+  }
+  //Read after write
+  uint8_t read_buffer[ioUnitSize * ioUnitInPage];
+  for(uint64_t i = 0; i<all_pages; ++i){
+    req.lpn = i;
+    p_pmap->read(req, tick);
+    p_pmap->cd_info->pDisk->read(i*16, ioUnitInPage ,read_buffer);
+    if(i % (all_pages / 4) == 0){
+      std::cout <<"GCCompressTest-Finished read pages: " << i << "/" << all_pages << std::endl;
     }
   }
   BlockStat block_stat = p_pmap->calculateBlockStat();
-  EXPECT_EQ(p_pmap->stat.decompressCount, 0);
+  EXPECT_GT(p_pmap->stat.decompressCount, 0);
   EXPECT_GE(p_pmap->stat.failedCompressCout, 0);
   EXPECT_GT(p_pmap->stat.gcCount, 10);
   EXPECT_GE(p_pmap->stat.overwriteCompressUnitCount, 0);
   EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
-  EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, 0);
+  EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, all_pages * ioUnitInPage);
   EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * test_info.write_pages);
   if(test_info.dwpolicy == DiskWritePolicy::ZERO || test_info.dwpolicy == DiskWritePolicy::CUSTOM){
     EXPECT_GT(block_stat.compressUnitCount, 0);
