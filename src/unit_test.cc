@@ -117,7 +117,7 @@ void PageMappingTestFixture::GCCompressTest(UTTestInfo& test_info){
   for(uint64_t i = 0; i<all_pages; ++i){
     req.lpn = i;
     p_pmap->read(req, tick);
-    p_pmap->cd_info->pDisk->read(i*16, ioUnitInPage ,read_buffer);
+    p_pmap->cd_info.pDisk->read(i*16, ioUnitInPage ,read_buffer);
     if(i % (all_pages / 4) == 0){
       std::cout <<"GCCompressTest-Finished read pages: " << i << "/" << all_pages << std::endl;
     }

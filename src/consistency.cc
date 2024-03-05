@@ -20,9 +20,9 @@ void GCChildObject::init(){
     remakeFTL(conf, p_ftl, p_pmap, p_dram, cfg_info);
     p_pmap->resetStatValues();
     //Initialize Disk.
-    p_pmap->cd_info = new SimpleSSD::CompressedDiskInfo();
-    p_pmap->cd_info->offset = 0;
-    p_pmap->cd_info->pDisk = createTestDisk(SimpleSSD::CompressType::LZ4, DiskInitPolicy::ALL_ZERO, cfg_info->nTotalLogicalPages);
+    p_pmap->cd_info = SimpleSSD::CompressedDiskInfo();
+    p_pmap->cd_info.offset = 0;
+    p_pmap->cd_info.pDisk = createTestDisk(SimpleSSD::CompressType::LZ4, DiskInitPolicy::ALL_ZERO, cfg_info->nTotalLogicalPages);
 }
 
 void GCChildObject::run(){
@@ -75,7 +75,7 @@ void writeShareObject(GCSharedObject* pgc_sharedobj, GCChildObject* pgc_childobj
                     return;
                 }
                 uint64_t didx = iter.first*ioUnitInPage + idx;
-                if(mapping.length != ((SimpleSSD::CompressedDisk*)(p_pmap->cd_info->pDisk))->getCompressedLength(didx)){
+                if(mapping.length != ((SimpleSSD::CompressedDisk*)(p_pmap->cd_info.pDisk))->getCompressedLength(didx)){
                     disklen_consist = false;
                     return;
                 }
@@ -90,7 +90,6 @@ void writeShareObject(GCSharedObject* pgc_sharedobj, GCChildObject* pgc_childobj
 
 void cSigTermHandler(int signum){
     writeShareObject(pgc_sharedobj, pgc_childobj);
-    clear_ptr(pgc_childobj->p_pmap->cd_info);   
     exit(EXIT_SUCCESS);
 }
 
