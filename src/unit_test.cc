@@ -123,18 +123,23 @@ void PageMappingTestFixture::GCCompressTest(UTTestInfo& test_info){
     }
   }
   BlockStat block_stat = p_pmap->calculateBlockStat();
-  EXPECT_GT(p_pmap->stat.decompressCount, 0);
   EXPECT_GE(p_pmap->stat.failedCompressCout, 0);
   EXPECT_GT(p_pmap->stat.gcCount, 10);
   EXPECT_GE(p_pmap->stat.overwriteCompressUnitCount, 0);
   EXPECT_GT(p_pmap->stat.reclaimedBlocks, 90);
   EXPECT_EQ(p_pmap->stat.totalReadIoUnitCount, all_pages * ioUnitInPage);
   EXPECT_GE(p_pmap->stat.totalWriteIoUnitCount, ioUnitInPage * test_info.write_pages);
-  if(test_info.dwpolicy == DiskWritePolicy::ZERO || test_info.dwpolicy == DiskWritePolicy::CUSTOM){
+  if(test_info.dwpolicy == DiskWritePolicy::ZERO){
     EXPECT_GT(block_stat.compressUnitCount, 0);
+    EXPECT_GT(p_pmap->stat.decompressCount, 0);
+  }
+  else if(test_info.dwpolicy == DiskWritePolicy::CUSTOM){
+    EXPECT_GT(block_stat.compressUnitCount, 0);
+    EXPECT_GT(p_pmap->stat.decompressCount, 0);
   }
   else if(test_info.dwpolicy == DiskWritePolicy::BYTE_RANDOM){
     EXPECT_EQ(block_stat.compressUnitCount, 0);
+    EXPECT_EQ(p_pmap->stat.decompressCount, 0);
   }
   else{
     assert(false && "Not support yet.");
